@@ -1,5 +1,4 @@
 # app.py - Backend using Flask
-import os
 from flask import Flask, render_template, request, jsonify
 import requests
 from bs4 import BeautifulSoup
@@ -47,6 +46,5 @@ def crawl():
     return jsonify(results)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-
+    port = 
+    app.run(debug=False)
