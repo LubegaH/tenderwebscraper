@@ -1,0 +1,99 @@
+<!-- templates/index.html - Frontend HTML -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Crawler</title>
+</head>
+<body>
+    <h1>Website Crawler</h1>
+    <form id="crawler-form">
+        <label for="urls">Enter URLs (one per line):</label><br>
+        <textarea id="urls" name="urls" rows="5" cols="50"></textarea><br><br>
+
+        <label for="buzzwords">Enter buzzwords (comma-separated):</label><br>
+        <input type="text" id="buzzwords" name="buzzwords" size="50"><br><br>
+
+        <input type="submit" value="Crawl">
+    </form>
+
+    <h2>Results</h2>
+    <div id="results"></div>
+
+    <!-- <script>
+        document.getElementById('crawler-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = new FormData(e.target);
+            const urls = form.get('urls').split('\n').map(url => url.trim()).filter(url => url.length > 0);
+            const buzzwords = form.get('buzzwords');
+            
+            fetch('/crawl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'urls': urls,
+                    'buzzwords': buzzwords,
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('results');
+                resultDiv.innerHTML = '';
+                data.forEach(result => {
+                    const p = document.createElement('p');
+                    if (result.found) {
+                        p.textContent = `Buzzwords found in ${result.url}: ${result.found.join(', ')}`;
+                    } else if (result.error) {
+                        p.textContent = `Error crawling ${result.url}: ${result.error}`;
+                    } else {
+                        p.textContent = `No buzzwords found in ${result.url}.`;
+                    }
+                    resultDiv.appendChild(p);
+                });
+            });
+        });
+    </script> -->
+
+    <!-- Updated JavaScript in index.html -->
+<script>
+    document.getElementById('crawler-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const urls = document.getElementById('urls').value.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+        const buzzwords = document.getElementById('buzzwords').value;
+
+        fetch('/crawl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                urls: urls,
+                buzzwords: buzzwords,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = '';
+            data.forEach(result => {
+                const p = document.createElement('p');
+                if (result.found) {
+                    p.textContent = `Buzzwords found in ${result.url}: ${result.found.join(', ')}`;
+                } else if (result.error) {
+                    p.textContent = `Error crawling ${result.url}: ${result.error}`;
+                } else {
+                    p.textContent = `No buzzwords found in ${result.url}.`;
+                }
+                resultDiv.appendChild(p);
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

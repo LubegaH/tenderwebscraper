@@ -1,0 +1,101 @@
+<!-- templates/index.html - Frontend HTML -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website Crawler</title>
+  </head>
+  <body>
+    <h1>Website Crawler</h1>
+    <form id="crawler-form">
+      <label for="urls">Enter URLs (one per line):</label><br />
+      <textarea id="urls" name="urls" rows="5" cols="50"></textarea><br /><br />
+
+      <label for="buzzwords">Enter buzzwords (comma-separated):</label><br />
+      <input
+        type="text"
+        id="buzzwords"
+        name="buzzwords"
+        size="50"
+      /><br /><br />
+
+      <input type="submit" value="Crawl" />
+    </form>
+
+    <h2>Results</h2>
+    <div id="results"></div>
+
+    <!-- Updated JavaScript in index.html -->
+    <script>
+      document
+        .getElementById('crawler-form')
+        .addEventListener('submit', async function (e) {
+          e.preventDefault();
+
+          const urls = document
+            .getElementById('urls')
+            .value.split('\n')
+            .map((url) => url.trim())
+            .filter((url) => url.length > 0);
+          const buzzwords = document
+            .getElementById('buzzwords')
+            .value.split(',')
+            .map((word) => word.trim())
+            .filter((word) => word.length > 0);
+
+          const resultDiv = document.getElementById('results');
+          resultDiv.innerHTML = '<p>Crawling... Please wait.</p>';
+
+          try {
+            const response = await fetch('/crawl', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ urls, buzzwords }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            displayResults(data);
+          } catch (error) {
+            resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+          }
+        });
+
+      function displayResults(data) {
+        const resultDiv = document.getElementById('results');
+        resultDiv.innerHTML = '';
+
+        if (data.length === 0) {
+          resultDiv.innerHTML = '<p>No results found.</p>';
+          return;
+        }
+
+        data.forEach((result) => {
+          const resultElement = document.createElement('div');
+          resultElement.className = 'result-item';
+
+          if (result.found && result.found.length > 0) {
+            resultElement.innerHTML = `
+                    <h3>Buzzwords found in ${result.url}:</h3>
+                    <ul>${result.found
+                      .map((word) => `<li>${word}</li>`)
+                      .join('')}</ul>
+                `;
+          } else if (result.error) {
+            resultElement.innerHTML = `<p class="error">Error crawling ${result.url}: ${result.error}</p>`;
+          } else {
+            resultElement.innerHTML = `<p>No buzzwords found in ${result.url}.</p>`;
+          }
+
+          resultDiv.appendChild(resultElement);
+        });
+      }
+    </script>
+  </body>
+</html>
