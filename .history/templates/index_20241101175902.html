@@ -11,7 +11,7 @@
     />
   </head>
   <body>
-    <h1>SHA Website Crawler</h1>
+    <h1>Website Crawler</h1>
     <form id="crawler-form">
       <label for="urls">Enter URLs (one per line):</label><br />
       <textarea id="urls" name="urls" rows="5" cols="50"></textarea><br /><br />
@@ -114,19 +114,11 @@
           foundWordsSection.innerHTML = `<h3>I found the following buzzwords on these sites:</h3>`;
           buzzwordsFound.forEach((result) => {
             const siteResult = document.createElement('div');
-
-            // Display URL as a clickable link
-            siteResult.innerHTML = `
-          <strong><a href="${
-            result.url
-          }" target="_blank" rel="noopener noreferrer">${
+            siteResult.innerHTML = `<strong>${
               result.url
-            }</a></strong>
-          <div style="margin-left: 20px; margin-top: 5px;">${result.words.join(
-            ', '
-          )}</div>
-        `;
-
+            }</strong><ul>${result.words
+              .map((word) => `<li>${word}</li>`)
+              .join('')}</ul>`;
             foundWordsSection.appendChild(siteResult);
           });
           resultDiv.appendChild(foundWordsSection);
