@@ -51,14 +51,12 @@ class WebCrawler:
             'User-Agent': 'SHA-WebCrawler/1.0 (+https://example.com/bot)'
         })
         self.executor = ThreadPoolExecutor(max_workers=5)
-    # Handles making HTTP requests with rate limiting
+    
     @sleep_and_retry
     @limits(calls=10, period=60) # Rate limit: 10 requests per minute
     def fetch_url(self, url: str) -> requests.Response:
         return self.session.get(url, timeout=10)
     
-    # Check if a URL can be crawled according to the site's robots.txt file
-    # Includes caching of robots.txt results
     def check_robots_txt(self, url: str) -> bool:
         try:
             parsed_url = urllib.parse.urlparse(url)
@@ -77,7 +75,7 @@ class WebCrawler:
             logger.warning(f"Error checking robots.txt for {url}: {str(e)}")
             return True # Defaults to allowing if robots.txt check fails
 
-# Scrapes a single URL, Validates URL, checks cache, respects robots.txt, Returns a CrawlResult object
+# Function to scrape the URL and look for buzzwords
     def scrape_url(self, url: str, buzzwords: List[str]) -> CrawlResult:
             try:
                 # Validate URL
@@ -117,7 +115,6 @@ class WebCrawler:
                 logger.error(f"Unexpected error for {url}: {str(e)}")
                 return CrawlResult(url=url, found=[], error=f"Unexpected error: {str(e)}")
 
-    # Manages concurrent scraping of multiple URLs
     def crawl_urls(self, urls: List[str], buzzwords: List[str]) -> List[Dict[str, Any]]:
         futures = []
         for url in urls:
@@ -144,7 +141,7 @@ class WebCrawler:
         
         return results
 
-crawler = WebCrawler()
+
 
 @app.route('/')
 def index():
@@ -152,32 +149,19 @@ def index():
 
 @app.route('/crawl', methods=['POST'])
 def crawl():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-
-        urls = data.get('urls', [])
-        buzzwords = data.get('buzzwords', [])
-
-        # Input validation
-        if not urls or not buzzwords:
-            return jsonify({'error': 'URLs and buzzwords are required'}), 400
-        if len(urls) > 50:  # Limit number of URLs
-            return jsonify({'error': 'Maximum 50 URLs allowed'}), 400
-        if len(buzzwords) > 100:  # Limit number of buzzwords
-            return jsonify({'error': 'Maximum 100 buzzwords allowed'}), 400
-
-        # Process buzzwords
-        buzzwords = [word.strip() for word in buzzwords if word.strip()]
-        
-        # Crawl URLs
-        results = crawler.crawl_urls(urls, buzzwords)
-        return jsonify(results)
-
-    except Exception as e:
-        logger.error(f"Error in crawl endpoint: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+    data = request.get_json()
+    urls = data.get('urls', [])
+    buzzwords = data.get('buzzwords', [])
+    
+    # Ensure buzzwords are in a list format
+    if isinstance(buzzwords, str):
+        buzzwords = [word.strip() for word in buzzwords.split(',')]
+    
+    results = []
+    for url in urls:
+        result = scrape_url(url, buzzwords)
+        results.append(result)
+    return jsonify(results)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

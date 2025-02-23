@@ -1,0 +1,139 @@
+/* General Styles */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f7f7f7;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1 {
+  color: #ff5a5f; /* Airbnb's primary brand color */
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+/* Form Styles */
+form {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 20px;
+}
+
+label {
+  font-size: 1rem;
+  color: #484848;
+  font-weight: 500;
+}
+
+textarea,
+input[type='text'] {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  margin-bottom: 15px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+input[type='submit'] {
+  background-color: #ff5a5f;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input[type='submit']:hover {
+  background-color: #ff787d;
+}
+
+/* Results Section Styles */
+h2 {
+  color: #484848;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+#results {
+  width: 100%;
+  max-width: 600px;
+}
+
+.result-item {
+  background-color: #ffffff;
+  margin-top: 10px;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.result-item h3 {
+  color: #ff5a5f;
+  margin: 0 0 10px;
+}
+
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+ul li {
+  background-color: #f7f7f7;
+  padding: 8px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.error {
+  color: #d9534f;
+}
+/* Styling for date fields */
+.date-field {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  margin-bottom: 15px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #333;
+  transition: border-color 0.3s ease;
+}
+
+/* Consistent styling on focus */
+.date-field:focus {
+  outline: none;
+  border-color: #ff5a5f;
+  box-shadow: 0 0 0 2px rgba(255, 90, 95, 0.3);
+}
+/* Date range wrapper styling */
+.date-range {
+  display: flex;
+  gap: 15px; /* Space between start and end date fields */
+}
+
+.date-range > div {
+  flex: 1; /* Ensures both fields are evenly spaced and take up equal width */
+}
