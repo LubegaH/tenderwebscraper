@@ -303,11 +303,7 @@
         function stopCrawl(message) {
           isCrawling = false;
           clearTimeout(progressSimulator);
-          if (
-            message &&
-            typeof message === 'string' &&
-            !document.getElementById('results').innerHTML.trim()
-          ) {
+          if (message && typeof message === 'string') {
             document.getElementById('results').innerHTML = `<p>${message}</p>`;
           }
         }
