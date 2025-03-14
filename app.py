@@ -1,14 +1,19 @@
 
 # app.py - Backend using Flask
+# from asyncio import Lock, Queue
+from threading import Lock
+from queue import Queue
 import os
+from queue import Empty
 from flask import Flask, render_template, request, jsonify
 import requests
+import backoff
 from bs4 import BeautifulSoup
 import re
 import time
 import logging
 import urllib.parse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from urllib.robotparser import RobotFileParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -31,120 +36,229 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Content-Security-Policy'] = "default-src 'self"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     return response
 
-# Cache configuration
-url_cache = TTLCache(maxsize=100, ttl=3600)
-robots_cache = TTLCache(maxsize=100, ttl=3600)
+
+@dataclass
+class CrawlRequest:
+    url: str
+    buzzwords: List[str]
+    retries: int = 3
+    max_retries: int = 3
+    timeout: int = 30
 
 @dataclass
 class CrawlResult:
     url: str
     found: List[str]
     error: str = None
+    status_code: Optional[int] = None
+    retry_count: int = 0
 
-class WebCrawler:
-    def __init__(self):
+class SHAWebCrawler:
+    def __init__(
+            self,
+            max_workers: int = 10,
+            queue_size: int = 1000,
+            request_timeout: int = 30,
+            max_retries: int = 3):
+        
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SHA-WebCrawler/1.0 (+https://example.com/bot)'
         })
-        self.executor = ThreadPoolExecutor(max_workers=5)
+
+        # Thread pool and queue configuration
+        self.max_workers = max_workers
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.request_queue = Queue(maxsize=queue_size)
+        self.result_queue = Queue()
+
+        # Configuration
+        self.request_timeout = request_timeout
+        self.max_retries = max_retries
+
+        # Caches and locks
+        self.url_cache = TTLCache(maxsize=1000, ttl=3600)
+        self.robots_cache = TTLCache(maxsize=100, ttl=3600)
+        self.domain_locks = {}
+        self.domain_locks_lock = Lock()
+
+
+    def get_domain_lock(self, domain: str) -> Lock:
+        """Get or create a lock for a specific domain."""
+        with self.domain_locks_lock:
+            if domain not in self.domain_locks:
+                self.domain_locks[domain] = Lock()
+            return self.domain_locks[domain]
+    
+    @backoff.on_exception(
+            backoff.expo,
+            (requests.exceptions.RequestException, TimeoutError),
+            max_tries=3,
+            max_time=30
+    )
+
     # Handles making HTTP requests with rate limiting
     @sleep_and_retry
     @limits(calls=10, period=60) # Rate limit: 10 requests per minute
     def fetch_url(self, url: str) -> requests.Response:
-        return self.session.get(url, timeout=10)
+        return self.session.get(url, timeout=self.request_timeout)
     
-    # Check if a URL can be crawled according to the site's robots.txt file
-    # Includes caching of robots.txt results
+    
     def check_robots_txt(self, url: str) -> bool:
+        """Check if URL can be crawled according to robots.txt."""
         try:
             parsed_url = urllib.parse.urlparse(url)
-            base_url = f"{parsed_url.scheme}: //{parsed_url.netloc}"
+            domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            # base_url = f"{parsed_url.scheme}: //{parsed_url.netloc}"
 
-            if base_url in robots_cache:
-                rp = robots_cache[base_url]
-            else:
+            with self.get_domain_lock(domain):
+                if domain in self.robots_cache:
+                    return self.robots_cache[domain].can_fetch("SHA-WebCrawler", url)
                 rp = RobotFileParser()
-                rp.set_url(f"{base_url}/robots.txt")
+                rp.set_url(f"{domain}/robots.txt")
                 rp.read()
-                robots_cache[base_url] = rp
+                self.robots_cache[domain] = rp
+                return rp.can_fetch("SHA-WebCrawler", url)
 
-            return rp.can_fetch("SHA-WebCrawler", url)
         except Exception as e:
-            logger.warning(f"Error checking robots.txt for {url}: {str(e)}")
+            logging.warning(f"Error checking robots.txt for {url}: {str(e)}")
             return True # Defaults to allowing if robots.txt check fails
 
 # Scrapes a single URL, Validates URL, checks cache, respects robots.txt, Returns a CrawlResult object
-    def scrape_url(self, url: str, buzzwords: List[str]) -> CrawlResult:
-            try:
-                # Validate URL
-                if not validate_url(url):
-                    return CrawlResult(url=url, found=[], error="Invalid URL format")
 
-                # Check cache
-                cache_key = f"{url}:{','.join(sorted(buzzwords))}"
-                if cache_key in url_cache:
-                    return url_cache[cache_key]
+    def process_request(self, request: CrawlRequest) -> CrawlResult:
+        """Process a single crawl request with retries and error handling"""
+        try:
+            # URL validation
+            if not validate_url(request.url):
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error="Invalid URL format"
+                )
 
-                # Check robots.txt
-                if not self.check_robots_txt(url):
-                    return CrawlResult(url=url, found=[], error="Access denied by robots.txt")
+            # Check cache
+            cache_key = f"{request.url}:{','.join(sorted(request.buzzwords))}"
+            if cache_key in self.url_cache:
+                return self.url_cache[cache_key]
 
-                # Fetch and parse content
-                response = self.fetch_url(url)
-                response.raise_for_status()
-                
-                soup = BeautifulSoup(response.text, 'html.parser')
-                text = soup.get_text(separator=' ')
-                
-                # Find buzzwords (case-insensitive)
-                found_words = [
-                    word for word in buzzwords 
-                    if re.search(r'\b' + re.escape(word) + r'\b', text, re.IGNORECASE)
-                ]
-                
-                result = CrawlResult(url=url, found=found_words)
-                url_cache[cache_key] = result
-                return result
+            # Check robots.txt
+            if not self.check_robots_txt(request.url):
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error="Access denied by robots.txt"
+                )
 
-            except requests.RequestException as e:
-                logger.error(f"Request error for {url}: {str(e)}")
-                return CrawlResult(url=url, found=[], error=f"Request failed: {str(e)}")
-            except Exception as e:
-                logger.error(f"Unexpected error for {url}: {str(e)}")
-                return CrawlResult(url=url, found=[], error=f"Unexpected error: {str(e)}")
-
-    # Manages concurrent scraping of multiple URLs
-    def crawl_urls(self, urls: List[str], buzzwords: List[str]) -> List[Dict[str, Any]]:
-        futures = []
-        for url in urls:
-            futures.append(
-                self.executor.submit(self.scrape_url, url.strip(), buzzwords)
+            # Fetch and parse content
+            response = self.fetch_url(request.url)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            text = soup.get_text(separator=' ')
+            
+            # Find buzzwords (case-insensitive)
+            found_words = [
+                word for word in request.buzzwords 
+                if re.search(r'\b' + re.escape(word) + r'\b', text, re.IGNORECASE)
+            ]
+            
+            result = CrawlResult(
+                url=request.url,
+                found=found_words,
+                status_code=response.status_code,
+                retry_count=request.retries
             )
-        
+            
+            self.url_cache[cache_key] = result
+            return result
+
+        except requests.RequestException as e:
+            if request.retries < request.max_retries:
+                request.retries += 1
+                return self.process_request(request)
+            return CrawlResult(
+                url=request.url,
+                found=[],
+                error=f"Request failed: {str(e)}",
+                retry_count=request.retries
+            )
+        except Exception as e:
+            return CrawlResult(
+                url=request.url,
+                found=[],
+                error=f"Unexpected error: {str(e)}",
+                retry_count=request.retries
+            )
+
+
+
+    def crawl_urls(self, urls: List[str], buzzwords: List[str]) -> List[Dict[str, Any]]:
+        """Crawl multiple URLs concurrently with improved handling."""
+        # Submit all requests to the queue
+        for url in urls:
+            request = CrawlRequest(
+                url=url.strip(),
+                buzzwords=buzzwords,
+                max_retries=self.max_retries,
+                timeout=self.request_timeout
+            )
+            self.request_queue.put(request)
+
+        # Process requests concurrently
+        futures = []
         results = []
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                results.append({
-                    'url': result.url,
-                    'found': result.found,
-                    'error': result.error
-                })
-            except Exception as e:
-                logger.error(f"Error processing future: {str(e)}")
-                results.append({
-                    'url': 'unknown',
-                    'found': [],
-                    'error': f"Processing error: {str(e)}"
-                })
         
+        try:
+            # Submit tasks to thread pool
+            while not self.request_queue.empty():
+                try:
+                    request = self.request_queue.get(block=False)
+                    future = self.executor.submit(self.process_request, request)
+                    futures.append(future)
+                except Empty:
+                    break
+
+            # Collect results as they complete
+            for future in as_completed(futures, timeout=300):  # 5-minute total timeout
+                try:
+                    result = future.result()
+                    results.append({
+                        'url': result.url,
+                        'found': result.found,
+                        'error': result.error,
+                        'status_code': result.status_code,
+                        'retries': result.retry_count
+                    })
+                except TimeoutError:
+                    results.append({
+                        'url': 'unknown',
+                        'found': [],
+                        'error': 'Request timed out',
+                        'status_code': None,
+                        'retries': 0
+                    })
+                except Exception as e:
+                    results.append({
+                        'url': 'unknown',
+                        'found': [],
+                        'error': f"Processing error: {str(e)}",
+                        'status_code': None,
+                        'retries': 0
+                    })
+
+        finally:
+            # Clean up
+            for future in futures:
+                future.cancel()
+
         return results
 
-crawler = WebCrawler()
+# Initiallize the crawler
+crawler = SHAWebCrawler()
 
 @app.route('/')
 def index():
@@ -160,13 +274,15 @@ def crawl():
         urls = data.get('urls', [])
         buzzwords = data.get('buzzwords', [])
 
+        # Debug logging
+        # print("Received URLs:", urls)
+        # print("Received buzzwords:", buzzwords)
+
         # Input validation
         if not urls or not buzzwords:
             return jsonify({'error': 'URLs and buzzwords are required'}), 400
-        if len(urls) > 50:  # Limit number of URLs
+        if len(urls) > 50:
             return jsonify({'error': 'Maximum 50 URLs allowed'}), 400
-        if len(buzzwords) > 100:  # Limit number of buzzwords
-            return jsonify({'error': 'Maximum 100 buzzwords allowed'}), 400
 
         # Process buzzwords
         buzzwords = [word.strip() for word in buzzwords if word.strip()]
@@ -176,11 +292,13 @@ def crawl():
         return jsonify(results)
 
     except Exception as e:
-        logger.error(f"Error in crawl endpoint: {str(e)}")
+        logging.error(f"Error in crawl endpoint: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port)
-    # app.run(debug=True, port=port)
+    # app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, port=port)
 
