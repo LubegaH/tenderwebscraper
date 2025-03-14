@@ -1,0 +1,435 @@
+<!-- templates/index.html - Frontend HTML -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website Crawler</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
+    <h1>SHA Website Crawler</h1>
+    <form id="crawler-form">
+      <label for="urls">Enter URLs (one per line):</label><br />
+      <textarea id="urls" name="urls" rows="5" cols="50"></textarea><br /><br />
+
+      <label for="buzzwords">Enter buzzwords (comma-separated):</label><br />
+      <input
+        type="text"
+        id="buzzwords"
+        name="buzzwords"
+        size="50"
+      /><br /><br />
+
+      <input type="submit" value="Crawl" />
+    </form>
+
+    <!-- Progress Indicator -->
+    <div id="progress-container" style="display: none">
+      <div class="progress-wrapper">
+        <div class="progress-status">
+          <div class="progress-text">
+            <span id="processed-count">0</span> /
+            <span id="total-count">0</span> URLs processed
+          </div>
+          <div class="progress-percentage">
+            <span id="progress-percent">0%</span>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+      </div>
+      <div class="progress-details">
+        <div class="detail-item success">
+          <span class="detail-icon">✓</span>
+          <span class="detail-label">Successful:</span>
+          <span class="detail-value" id="success-count">0</span>
+        </div>
+        <div class="detail-item error">
+          <span class="detail-icon">✗</span>
+          <span class="detail-label">Errors:</span>
+          <span class="detail-value" id="error-count">0</span>
+        </div>
+        <div class="detail-item pending">
+          <span class="detail-icon">⟳</span>
+          <span class="detail-label">Pending:</span>
+          <span class="detail-value" id="pending-count">0</span>
+        </div>
+      </div>
+      <div id="cancel-button-container">
+        <button id="cancel-crawl" class="cancel-button">Cancel</button>
+      </div>
+    </div>
+
+    <h2>Results</h2>
+    <div id="results"></div>
+
+    <script>
+      document
+        .getElementById('crawler-form')
+        .addEventListener('submit', async function (e) {
+          e.preventDefault();
+
+          // Get form values and clean them
+          const urls = document
+            .getElementById('urls')
+            .value.split('\n')
+            .map((url) => url.trim())
+            .filter((url) => url.length > 0);
+
+          const buzzwords = document
+            .getElementById('buzzwords')
+            .value.split(',')
+            .map((word) => word.trim())
+            .filter((word) => word.length > 0);
+
+          const resultDiv = document.getElementById('results');
+          resultDiv.innerHTML = '<p>Crawling... Please wait.</p>';
+
+          try {
+            const response = await fetch('/crawl', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ urls, buzzwords }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Don't clear the form fields
+            // document.getElementById('urls').value = '';
+            // document.getElementById('buzzwords').value = '';
+
+            displayResults(data);
+          } catch (error) {
+            resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+          }
+        });
+
+      function displayResults(data) {
+        const resultDiv = document.getElementById('results');
+        resultDiv.innerHTML = '';
+
+        const unableToCrawl = [];
+        const noBuzzwordsFound = [];
+        const buzzwordsFound = [];
+
+        // Classify results
+        data.forEach((result) => {
+          if (result.error) {
+            unableToCrawl.push(result.url);
+          } else if (result.found && result.found.length > 0) {
+            buzzwordsFound.push({ url: result.url, words: result.found });
+          } else {
+            noBuzzwordsFound.push(result.url);
+          }
+        });
+
+        // Display Unable to Crawl section
+        if (unableToCrawl.length > 0) {
+          const errorSection = document.createElement('div');
+          errorSection.innerHTML = `
+            <h3>Unable to crawl these pages:</h3>
+            <ul>${unableToCrawl.map((url) => `<li>${url}</li>`).join('')}</ul>
+          `;
+          resultDiv.appendChild(errorSection);
+        }
+
+        // Display No Buzzwords Found section
+        if (noBuzzwordsFound.length > 0) {
+          const noBuzzwordsSection = document.createElement('div');
+          noBuzzwordsSection.innerHTML = `
+            <h3>No buzzwords found on these sites:</h3>
+            <ul>${noBuzzwordsFound
+              .map((url) => `<li>${url}</li>`)
+              .join('')}</ul>
+          `;
+          resultDiv.appendChild(noBuzzwordsSection);
+        }
+
+        // Display Buzzwords Found section
+        if (buzzwordsFound.length > 0) {
+          const foundWordsSection = document.createElement('div');
+          foundWordsSection.innerHTML = `<h3>Found buzzwords on these sites:</h3>`;
+          buzzwordsFound.forEach((result) => {
+            const siteResult = document.createElement('div');
+            siteResult.innerHTML = `
+              <p><strong><a href="${
+                result.url
+              }" target="_blank" rel="noopener noreferrer">${
+              result.url
+            }</a></strong></p>
+              <p>Found: ${result.words.join(', ')}</p>
+            `;
+            foundWordsSection.appendChild(siteResult);
+          });
+          resultDiv.appendChild(foundWordsSection);
+        }
+
+        // Handle case when no results at all
+        if (
+          unableToCrawl.length === 0 &&
+          noBuzzwordsFound.length === 0 &&
+          buzzwordsFound.length === 0
+        ) {
+          resultDiv.innerHTML = '<p>No results found.</p>';
+        }
+      }
+
+      // Progress indicator
+      document.addEventListener('DOMContentLoaded', function () {
+        // Get references to UI elements
+        const progressContainer = document.getElementById('progress-container');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const processedCount = document.getElementById('processed-count');
+        const totalCount = document.getElementById('total-count');
+        const progressPercent = document.getElementById('progress-percent');
+        const successCount = document.getElementById('success-count');
+        const errorCount = document.getElementById('error-count');
+        const pendingCount = document.getElementById('pending-count');
+        const cancelButton = document.getElementById('cancel-crawl');
+
+        // Track if a crawl is in progress
+        let isCrawling = false;
+        let controller = null;
+
+        // Set up the cancel button
+        cancelButton.addEventListener('click', function () {
+          if (controller) {
+            controller.abort();
+            stopCrawl('Crawl cancelled by user.');
+          }
+        });
+
+        // Modify the form submission handler
+        document
+          .getElementById('crawler-form')
+          .addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // Don't allow multiple crawls at once
+            if (isCrawling) {
+              alert(
+                'A crawl is already in progress. Please wait or cancel it.'
+              );
+              return;
+            }
+
+            // Get form values and clean them
+            const urls = document
+              .getElementById('urls')
+              .value.split('\n')
+              .map((url) => url.trim())
+              .filter((url) => url.length > 0);
+
+            const buzzwords = document
+              .getElementById('buzzwords')
+              .value.split(',')
+              .map((word) => word.trim())
+              .filter((word) => word.length > 0);
+
+            // Validation
+            if (urls.length === 0) {
+              alert('Please enter at least one URL to crawl.');
+              return;
+            }
+
+            if (buzzwords.length === 0) {
+              alert('Please enter at least one buzzword to search for.');
+              return;
+            }
+
+            // Reset and show progress UI
+            resetProgress();
+            startCrawl(urls.length);
+
+            // Create a new abort controller for this request
+            controller = new AbortController();
+
+            try {
+              const response = await fetch('/crawl', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ urls, buzzwords }),
+                signal: controller.signal,
+              });
+
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+
+              const data = await response.json();
+              updateProgressComplete(data);
+              displayResults(data);
+            } catch (error) {
+              if (error.name === 'AbortError') {
+                stopCrawl('Crawl cancelled by user.');
+              } else {
+                stopCrawl(`Error: ${error.message}`);
+              }
+            }
+          });
+
+        // Progress functions
+        function startCrawl(totalUrls) {
+          isCrawling = true;
+          document.getElementById('results').innerHTML = '';
+          progressContainer.style.display = 'block';
+
+          // Initialize progress data
+          totalCount.textContent = totalUrls;
+          processedCount.textContent = '0';
+          progressPercent.textContent = '0%';
+          progressBarFill.style.width = '0%';
+          successCount.textContent = '0';
+          errorCount.textContent = '0';
+          pendingCount.textContent = totalUrls;
+
+          // Add a simulated progress update since we don't have real-time updates
+          simulateProgress(totalUrls);
+        }
+
+        function stopCrawl(message) {
+          isCrawling = false;
+          clearTimeout(progressSimulator);
+          document.getElementById('results').innerHTML = `<p>${message}</p>`;
+        }
+
+        function resetProgress() {
+          clearTimeout(progressSimulator);
+          progressBarFill.style.width = '0%';
+          processedCount.textContent = '0';
+          progressPercent.textContent = '0%';
+          successCount.textContent = '0';
+          errorCount.textContent = '0';
+          pendingCount.textContent = '0';
+        }
+
+        let progressSimulator = null;
+
+        function simulateProgress(total) {
+          let processed = 0;
+          const simulateStep = Math.max(1, Math.floor(total / 20)); // Update in about 20 steps
+          const updateInterval = Math.max(300, Math.min(1000, 10000 / total)); // Between 300ms and 1000ms
+
+          function updateStep() {
+            if (!isCrawling) return;
+
+            processed = Math.min(processed + simulateStep, total - 1); // Never reach 100% in simulation
+            const percent = Math.floor((processed / total) * 100);
+
+            processedCount.textContent = processed;
+            progressPercent.textContent = `${percent}%`;
+            progressBarFill.style.width = `${percent}%`;
+
+            // Randomly distribute between success and error for the simulation
+            const successSoFar = Math.floor(processed * 0.8); // Assume 80% success rate for simulation
+            const errorSoFar = processed - successSoFar;
+
+            successCount.textContent = successSoFar;
+            errorCount.textContent = errorSoFar;
+            pendingCount.textContent = total - processed;
+
+            if (processed < total - 1) {
+              progressSimulator = setTimeout(updateStep, updateInterval);
+            }
+          }
+
+          updateStep();
+        }
+
+        function updateProgressComplete(data) {
+          clearTimeout(progressSimulator);
+          isCrawling = false;
+
+          const total = data.length;
+          const errors = data.filter((result) => result.error).length;
+          const success = total - errors;
+
+          processedCount.textContent = total;
+          totalCount.textContent = total;
+          progressPercent.textContent = '100%';
+          progressBarFill.style.width = '100%';
+
+          successCount.textContent = success;
+          errorCount.textContent = errors;
+          pendingCount.textContent = '0';
+
+          // Transform the progress container to a stats container
+          progressContainer.classList.add('stats-mode');
+
+          // Add summary stats section
+          const buzzwordsFound = data.filter(
+            (result) => result.found && result.found.length > 0
+          ).length;
+          const noBuzzwords = success - buzzwordsFound;
+
+          // Update heading and display permanent stats
+          const statsHeading = document.createElement('h3');
+          statsHeading.textContent = 'Crawler Stats Summary';
+          statsHeading.className = 'stats-heading';
+          progressContainer.prepend(statsHeading);
+
+          // Modify the container to show comprehensive stats
+          document.querySelector('.progress-wrapper').style.display = 'none';
+          document.querySelector('.progress-details').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">${total}</div>
+            <div class="stat-label">URLs Processed</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${buzzwordsFound}</div>
+            <div class="stat-label">URLs with Buzzwords</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${noBuzzwords}</div>
+            <div class="stat-label">URLs without Buzzwords</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${errors}</div>
+            <div class="stat-label">Failed Requests</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${
+              Math.round((buzzwordsFound / total) * 100) || 0
+            }%</div>
+            <div class="stat-label">Hit Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${
+              Math.round((success / total) * 100) || 0
+            }%</div>
+            <div class="stat-label">Success Rate</div>
+          </div>
+        </div>
+      `;
+
+          // Change the cancel button to a collapse/expand button
+          cancelButton.textContent = 'Hide Stats';
+          cancelButton.className = 'toggle-stats-button';
+          cancelButton.onclick = function () {
+            if (progressContainer.classList.contains('collapsed')) {
+              progressContainer.classList.remove('collapsed');
+              this.textContent = 'Hide Stats';
+            } else {
+              progressContainer.classList.add('collapsed');
+              this.textContent = 'Show Stats';
+            }
+          };
+        }
+      });
+    </script>
+  </body>
+</html>
