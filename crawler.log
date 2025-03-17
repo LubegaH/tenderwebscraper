@@ -915,3 +915,37 @@
 2025-03-14 13:31:08,861 - INFO - 127.0.0.1 - - [14/Mar/2025 13:31:08] "POST /crawl HTTP/1.1" 200 -
 2025-03-14 17:50:00,579 - INFO -  * Detected change in '/Users/ham/Desktop/Webscraper/app.py', reloading
 2025-03-14 17:50:00,844 - INFO -  * Restarting with stat
+2025-03-17 12:26:09,391 - INFO - 127.0.0.1 - - [17/Mar/2025 12:26:09] "GET / HTTP/1.1" 200 -
+2025-03-17 12:26:09,511 - INFO - 127.0.0.1 - - [17/Mar/2025 12:26:09] "GET /static/styles.css HTTP/1.1" 200 -
+2025-03-17 12:26:09,730 - INFO - 127.0.0.1 - - [17/Mar/2025 12:26:09] "GET / HTTP/1.1" 200 -
+2025-03-17 12:26:10,002 - INFO - 127.0.0.1 - - [17/Mar/2025 12:26:10] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-03-17 12:26:42,891 - WARNING - Error checking robots.txt for https://www.ilo.org/all-publications-for-project?cf0=GLO/19/18/NLD: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:43,390 - WARNING - Error checking robots.txt for https://pro.drc.ngo/resources/tenders/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:43,400 - WARNING - Error checking robots.txt for https://www.unido.org/get-involved-procurement/procurement-opportunities: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate in certificate chain (_ssl.c:1091)>
+2025-03-17 12:26:43,455 - WARNING - Error checking robots.txt for https://www.ungm.org/Account/Account/Login: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:43,973 - WARNING - Error checking robots.txt for https://www.norad.no/en/front/about-norad/tenders-from-norad/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:44,011 - WARNING - Error checking robots.txt for https://www.danchurchaid.org/how-we-work/procurement-logistics/doing-business-with-dca/business-opportunities: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:46,875 - WARNING - Error checking robots.txt for https://www.developmentaid.org: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:46,904 - WARNING - Error checking robots.txt for https://www.enabel.be/grants/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:49,578 - WARNING - Error checking robots.txt for https://www.enabel.be/grants/?in_country=1460&is_status=all#grants: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:53,435 - WARNING - Error checking robots.txt for https://ungm.in-tend.co.uk/wfp/aspx/Home: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate in certificate chain (_ssl.c:1091)>
+2025-03-17 12:26:54,005 - WARNING - Error checking robots.txt for https://www.tendersontime.com/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:54,679 - WARNING - Error checking robots.txt for https://www.enabel.be/grants/?in_country=1383&is_status=all#grants: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:26:55,370 - WARNING - Error checking robots.txt for https://www.britishcouncil.ug: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:00,160 - WARNING - Error checking robots.txt for https://www.enabel.be/public-procurement/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:03,410 - WARNING - Error checking robots.txt for https://www.monitor.co.ug/uganda/jobs/tenders: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:03,595 - WARNING - Error checking robots.txt for https://projects.worldbank.org/en/projects-operations/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate in certificate chain (_ssl.c:1091)>
+2025-03-17 12:27:04,043 - WARNING - Error checking robots.txt for https://ausschreibungen.giz.de/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:05,252 - WARNING - Error checking robots.txt for https://www.sida.se/en/about-sida/procurements-at-sida: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:06,349 - WARNING - Error checking robots.txt for https://www.afdb.org/en/projects-and-operations/procurement: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:10,065 - WARNING - Error checking robots.txt for https://www.newvision.co.ug/opportunities/tenders: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:27:55,615 - INFO - Backing off fetch_url(...) for 0.8s (requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')))
+2025-03-17 12:28:03,134 - WARNING - Error checking robots.txt for https://apply.uncdf.org/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-03-17 12:28:49,680 - ERROR - Giving up fetch_url(...) after 2 tries (requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')))
+2025-03-17 12:28:51,202 - INFO - 127.0.0.1 - - [17/Mar/2025 12:28:51] "POST /crawl HTTP/1.1" 200 -
+2025-03-17 12:39:21,307 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-03-17 12:39:21,313 - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 12:39:21,314 - INFO -  * Restarting with stat
+2025-03-17 12:39:21,692 - WARNING -  * Debugger is active!
+2025-03-17 12:39:21,739 - INFO -  * Debugger PIN: 557-645-564
