@@ -913,3 +913,5 @@
 2025-03-14 13:29:40,133 - INFO - Backing off fetch_url(...) for 0.1s (requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')))
 2025-03-14 13:31:08,848 - ERROR - Giving up fetch_url(...) after 3 tries (requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='www.britishcouncil.ug', port=443): Read timed out. (read timeout=30))
 2025-03-14 13:31:08,861 - INFO - 127.0.0.1 - - [14/Mar/2025 13:31:08] "POST /crawl HTTP/1.1" 200 -
+2025-03-14 17:50:00,579 - INFO -  * Detected change in '/Users/ham/Desktop/Webscraper/app.py', reloading
+2025-03-14 17:50:00,844 - INFO -  * Restarting with stat
