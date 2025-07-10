@@ -1,9 +1,9 @@
 # gunicorn_config.py
 import multiprocessing
 
-# Worker configuration
+# Worker configuration - optimized for Render.com
 worker_class = 'gevent'  # Use gevent for async I/O operations
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = min(multiprocessing.cpu_count() * 2 + 1, 3)  # Max 3 workers for memory efficiency
 threads = 2
 
 # Timeouts
