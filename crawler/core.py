@@ -147,143 +147,161 @@ class SHAWebCrawler:
             return True  # Default to allowing if robots.txt check fails
 
     def process_request(self, request: CrawlRequest) -> CrawlResult:
-        """Process a single crawl request with comprehensive error handling."""
-        try:
-            # URL validation
-            if not validate_url(request.url):
-                return CrawlResult(
-                    url=request.url,
-                    found=[],
-                    error="Invalid URL format - must be a valid HTTP/HTTPS URL",
-                    error_code="VALIDATION_ERROR"
-                )
-
-            # Check cache
-            cache_key = create_cache_key(request.url, request.buzzwords)
-            if cache_key in self.url_cache:
-                cached_result = self.url_cache[cache_key]
-                logger.info(f"Cache hit for {request.url}")
-                return cached_result
-
-            # Check robots.txt
-            if not self.check_robots_txt(request.url):
-                return CrawlResult(
-                    url=request.url,
-                    found=[],
-                    error="Access denied by robots.txt - site disallows crawling",
-                    error_code="ROBOTS_BLOCKED"
-                )
-
-            # Fetch and parse content
-            response = self.fetch_url(request.url)
-            response.raise_for_status()
-            
-            # Validate response content
-            if not response.text:
-                return CrawlResult(
-                    url=request.url,
-                    found=[],
-                    error="Empty response content",
-                    error_code="NETWORK_ERROR",
-                    status_code=response.status_code
-                )
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            text = soup.get_text(separator=' ')
-            
-            # Find buzzwords using utility function
-            found_words = find_buzzwords_in_text(text, request.buzzwords)
-            
-            result = CrawlResult(
-                url=request.url,
-                found=found_words,
-                status_code=response.status_code,
-                retry_count=request.retries
-            )
-            
-            # Cache successful results
-            self.url_cache[cache_key] = result
-            logger.info(f"Successfully processed {request.url} - found {len(found_words)} buzzwords")
-            return result
-
-        except requests.exceptions.Timeout as e:
-            if request.retries < request.max_retries:
-                request.retries += 1
-                logger.warning(f"Timeout for {request.url}, retrying ({request.retries}/{request.max_retries})")
-                return self.process_request(request)
+        """Process a single crawl request with comprehensive error handling and iterative retries."""
+        # URL validation (only check once)
+        if not validate_url(request.url):
             return CrawlResult(
                 url=request.url,
                 found=[],
-                error=f"Request timeout after {request.max_retries} retries",
-                error_code="TIMEOUT_ERROR",
-                retry_count=request.retries
+                error="Invalid URL format - must be a valid HTTP/HTTPS URL",
+                error_code="VALIDATION_ERROR"
             )
-        
-        except requests.exceptions.ConnectionError as e:
-            if request.retries < request.max_retries:
-                request.retries += 1
-                logger.warning(f"Connection error for {request.url}, retrying ({request.retries}/{request.max_retries})")
-                return self.process_request(request)
+
+        # Check cache (only check once)
+        cache_key = create_cache_key(request.url, request.buzzwords)
+        if cache_key in self.url_cache:
+            cached_result = self.url_cache[cache_key]
+            logger.info(f"Cache hit for {request.url}")
+            return cached_result
+
+        # Check robots.txt (only check once)
+        if not self.check_robots_txt(request.url):
             return CrawlResult(
                 url=request.url,
                 found=[],
-                error=f"Connection failed - unable to reach server",
-                error_code="NETWORK_ERROR",
-                retry_count=request.retries
+                error="Access denied by robots.txt - site disallows crawling",
+                error_code="ROBOTS_BLOCKED"
             )
-        
-        except requests.exceptions.HTTPError as e:
-            status_code = e.response.status_code if e.response else None
-            if status_code == 403:
-                error_msg = "Access forbidden - server denied request"
-            elif status_code == 404:
-                error_msg = "Page not found"
-            elif status_code == 429:
-                error_msg = "Rate limit exceeded"
-            elif status_code and status_code >= 500:
-                error_msg = "Server error - try again later"
-            else:
-                error_msg = f"HTTP error {status_code}"
+
+        # Iterative retry loop to prevent recursion
+        while request.retries <= request.max_retries:
+            try:
+                # Fetch and parse content
+                response = self.fetch_url(request.url)
+                response.raise_for_status()
                 
-            return CrawlResult(
-                url=request.url,
-                found=[],
-                error=error_msg,
-                error_code="NETWORK_ERROR",
-                status_code=status_code,
-                retry_count=request.retries
-            )
+                # Validate response content
+                if not response.text:
+                    return CrawlResult(
+                        url=request.url,
+                        found=[],
+                        error="Empty response content",
+                        error_code="NETWORK_ERROR",
+                        status_code=response.status_code,
+                        retry_count=request.retries
+                    )
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                text = soup.get_text(separator=' ')
+                
+                # Find buzzwords using utility function
+                found_words = find_buzzwords_in_text(text, request.buzzwords)
+                
+                result = CrawlResult(
+                    url=request.url,
+                    found=found_words,
+                    status_code=response.status_code,
+                    retry_count=request.retries
+                )
+                
+                # Cache successful results
+                self.url_cache[cache_key] = result
+                logger.info(f"Successfully processed {request.url} - found {len(found_words)} buzzwords")
+                return result
+
+            except requests.exceptions.Timeout as e:
+                if request.retries < request.max_retries:
+                    request.retries += 1
+                    backoff_time = min(0.5 * (2 ** request.retries), 10)  # Cap at 10 seconds
+                    logger.warning(f"Timeout for {request.url}, retrying in {backoff_time}s ({request.retries}/{request.max_retries})")
+                    time.sleep(backoff_time)
+                    continue
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error=f"Request timeout after {request.max_retries} retries",
+                    error_code="TIMEOUT_ERROR",
+                    retry_count=request.retries
+                )
+            
+            except requests.exceptions.ConnectionError as e:
+                if request.retries < request.max_retries:
+                    request.retries += 1
+                    backoff_time = min(1.0 * (2 ** request.retries), 15)  # Cap at 15 seconds
+                    logger.warning(f"Connection error for {request.url}, retrying in {backoff_time}s ({request.retries}/{request.max_retries})")
+                    time.sleep(backoff_time)
+                    continue
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error=f"Connection failed - unable to reach server",
+                    error_code="NETWORK_ERROR",
+                    retry_count=request.retries
+                )
+            
+            except requests.exceptions.HTTPError as e:
+                status_code = e.response.status_code if e.response else None
+                if status_code == 403:
+                    error_msg = "Access forbidden - server denied request"
+                elif status_code == 404:
+                    error_msg = "Page not found"
+                elif status_code == 429:
+                    error_msg = "Rate limit exceeded"
+                elif status_code and status_code >= 500:
+                    error_msg = "Server error - try again later"
+                else:
+                    error_msg = f"HTTP error {status_code}"
+                    
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error=error_msg,
+                    error_code="NETWORK_ERROR",
+                    status_code=status_code,
+                    retry_count=request.retries
+                )
+            
+            except requests.RequestException as e:
+                if request.retries < request.max_retries:
+                    request.retries += 1
+                    backoff_time = min(2.0 * request.retries, 20)  # Cap at 20 seconds
+                    logger.warning(f"Request error for {request.url}, retrying in {backoff_time}s ({request.retries}/{request.max_retries})")
+                    time.sleep(backoff_time)
+                    continue
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error=f"Network request failed: {str(e)[:100]}",
+                    error_code="NETWORK_ERROR",
+                    retry_count=request.retries
+                )
+            
+            except Exception as e:
+                logger.error(f"Unexpected error processing {request.url}: {str(e)}")
+                return CrawlResult(
+                    url=request.url,
+                    found=[],
+                    error=f"Processing failed: {str(e)[:100]}",
+                    error_code="CRAWLER_ERROR",
+                    retry_count=request.retries
+                )
         
-        except requests.RequestException as e:
-            if request.retries < request.max_retries:
-                request.retries += 1
-                logger.warning(f"Request error for {request.url}, retrying ({request.retries}/{request.max_retries})")
-                return self.process_request(request)
-            return CrawlResult(
-                url=request.url,
-                found=[],
-                error=f"Network request failed: {str(e)[:100]}",
-                error_code="NETWORK_ERROR",
-                retry_count=request.retries
-            )
-        
-        except Exception as e:
-            logger.error(f"Unexpected error processing {request.url}: {str(e)}")
-            return CrawlResult(
-                url=request.url,
-                found=[],
-                error=f"Processing failed: {str(e)[:100]}",
-                error_code="CRAWLER_ERROR",
-                retry_count=request.retries
-            )
+        # Fallback if we somehow exit the loop without returning
+        return CrawlResult(
+            url=request.url,
+            found=[],
+            error="Maximum retries exceeded",
+            error_code="TIMEOUT_ERROR",
+            retry_count=request.retries
+        )
 
     def crawl_urls(self, urls: List[str], buzzwords: List[str]) -> List[Dict[str, Any]]:
-        """Crawl multiple URLs concurrently with improved handling."""
+        """Crawl multiple URLs concurrently with improved handling and timeout protection."""
         if self._closed:
             raise RuntimeError("Crawler has been closed")
             
-        # Limit the number of URLs to process at once (optimized for Render.com)
-        max_urls = min(len(urls), 15)
+        # More aggressive limits for production stability
+        max_urls = min(len(urls), 10)  # Reduced from 15 to 10
         urls = urls[:max_urls]
         
         # Ensure executor is available
@@ -314,8 +332,8 @@ class SHAWebCrawler:
                 except Empty:
                     break
 
-            # Collect results as they complete
-            for future in as_completed(futures, timeout=180):  # 3-minute total timeout
+            # Collect results as they complete with reduced timeout
+            for future in as_completed(futures, timeout=90):  # 90-second total timeout
                 try:
                     result = future.result()
                     results.append({

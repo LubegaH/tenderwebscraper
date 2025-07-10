@@ -1174,3 +1174,25 @@ werkzeug.exceptions.BadRequest: 400 Bad Request: The browser (or proxy) sent a r
 2025-07-10 13:22:55,341 - INFO -  * Restarting with stat
 2025-07-10 13:22:56,730 - WARNING -  * Debugger is active!
 2025-07-10 13:22:56,777 - INFO -  * Debugger PIN: 131-061-418
+2025-07-10 14:05:56,286 - INFO - Processing tender crawl request: 7 URLs, 13 buzzwords
+2025-07-10 14:05:57,517 - WARNING - Error checking robots.txt for https://addax-oryx-foundation.org/en/submit-a-project: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-07-10 14:05:57,867 - WARNING - Error checking robots.txt for https://www.biddetail.com/tanzania-tenders: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-07-10 14:05:58,297 - INFO - Successfully processed https://addax-oryx-foundation.org/en/submit-a-project - found 0 buzzwords
+2025-07-10 14:05:59,039 - WARNING - Error checking robots.txt for https://www.undp.org/tanzania/procurement: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-07-10 14:05:59,825 - INFO - Successfully processed https://www.biddetail.com/tanzania-tenders - found 1 buzzwords
+2025-07-10 14:05:59,881 - INFO - Successfully processed https://www.biddetail.com/uganda-tenders - found 1 buzzwords
+2025-07-10 14:06:00,484 - WARNING - Error checking robots.txt for https://opportunities-insight.britishcouncil.org/opportunities?sort_bef_combine=changed_DESC: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-07-10 14:06:00,750 - WARNING - Error checking robots.txt for https://www.norec.no/en/exchange/project-application/: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate in certificate chain (_ssl.c:1091)>
+2025-07-10 14:06:01,179 - INFO - Successfully processed https://www.undp.org/tanzania/procurement - found 2 buzzwords
+2025-07-10 14:06:01,497 - WARNING - Error checking robots.txt for https://kenya.highcommission.gov.au/nair/dap.html: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1091)>
+2025-07-10 14:06:01,602 - INFO - Successfully processed https://opportunities-insight.britishcouncil.org/opportunities?sort_bef_combine=changed_DESC - found 1 buzzwords
+2025-07-10 14:06:02,168 - INFO - Successfully processed https://www.norec.no/en/exchange/project-application/ - found 0 buzzwords
+2025-07-10 14:06:05,063 - INFO - Successfully processed https://kenya.highcommission.gov.au/nair/dap.html - found 2 buzzwords
+2025-07-10 14:06:05,064 - INFO - Crawl summary: 7 URLs processed, 7 successful, 0 failed, 5 found buzzwords
+2025-07-10 14:06:05,064 - INFO - Tender crawl completed: 7 successful, 0 failed, 5 potential opportunities found
+2025-07-10 14:06:05,076 - INFO - 127.0.0.1 - - [10/Jul/2025 14:06:05] "POST /crawl HTTP/1.1" 200 -
+2025-07-10 14:44:50,326 - INFO -  * Detected change in '/Users/ham/Downloads/tenderwebscraper/crawler/core.py', reloading
+2025-07-10 14:44:50,793 - INFO -  * Restarting with stat
+2025-07-10 14:53:11,100 - WARNING - Error checking robots.txt for https://nonexistent-domain-12345.com: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+2025-07-10 14:53:11,108 - INFO - Backing off fetch_url(...) for 0.6s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='nonexistent-domain-12345.com', port=443): Max retries exceeded with url: / (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f83980b4d50>: Failed to resolve 'nonexistent-domain-12345.com' ([Errno 8] nodename nor servname provided, or not known)")))
+2025-07-10 14:53:11,793 - INFO - Backing off fetch_url(...) for 1.2s (requests.exceptions.ConnectionError: HTTPSConnectionPool(host='nonexistent-domain-12345.com', port=443): Max retries exceeded with url: / (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f83b8194550>: Failed to resolve 'nonexistent-domain-12345.com' ([Errno 8] nodename nor servname provided, or not known)")))
